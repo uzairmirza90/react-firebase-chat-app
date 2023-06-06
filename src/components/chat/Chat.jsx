@@ -18,6 +18,14 @@ const Chat = () => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState();
   const messagesContainerRef = useRef(null);
+  const [replyToText, setReplyToText] = useState({id: "", text: ""});
+
+  const handleReply = (messageText, messageId) => {
+    setReplyToText({
+      id: messageId,
+      text: messageText,
+    });
+  };
 
   const handleLogout = async () => {
     setLoading(true);
@@ -130,13 +138,30 @@ const Chat = () => {
       const getUser = localStorage.getItem("chat-app-user");
       const currentUser = JSON.parse(getUser);
       console.log(currentUser);
-      await addDoc(messagesRef, {
-        senderEmail: currentUser.email,
-        receiverEmail: chat.email,
-        receiverName: chat.name,
-        createdAt: serverTimestamp(),
-        text: message,
-      });
+      if (replyToText.text !== "") {
+        await addDoc(messagesRef, {
+          senderEmail: currentUser.email,
+          receiverEmail: chat.email,
+          receiverName: chat.name,
+          createdAt: serverTimestamp(),
+          text: message,
+          id: Date.now().toString(),
+          replyTo: {
+            id: replyToText.id,
+            text: replyToText.text,
+          },
+        });
+        setReplyToText({id: "", text: ""});
+      } else {
+        await addDoc(messagesRef, {
+          senderEmail: currentUser.email,
+          receiverEmail: chat.email,
+          receiverName: chat.name,
+          createdAt: serverTimestamp(),
+          text: message,
+          id: Date.now().toString(),
+        });
+      }
     } catch (error) {
       console.log(error);
     }
@@ -183,8 +208,8 @@ const Chat = () => {
           paddingTop: 20,
           paddingBottom: 20,
           width: "100%",
-          height: 600,
-          maxHeight: 600,
+          height: "87vh",
+          // maxHeight: 600,
         }}
       >
         <Typography variant="h4">{chat.name}</Typography>
@@ -204,6 +229,7 @@ const Chat = () => {
                     backgroundColor: "#3580FF",
                     display: "flex",
                     justifyContent: "flex-end",
+                    flexDirection: "column",
                     alignItems: "center",
                     marginLeft: "auto",
                     borderRadius: 10,
@@ -216,12 +242,27 @@ const Chat = () => {
                     whiteSpace: "pre-wrap",
                     wordWrap: "break-word",
                     flexWrap: "wrap",
-                    maxWidth: "80%",
+                    maxWidth: "50%",
                     overflowWrap: "anywhere",
                     overflow: "auto",
                     marginTop: 5,
                   }}
                 >
+                  {message?.replyTo?.text && (
+                    <p
+                      style={{
+                        backgroundColor: "#E8E8E8",
+                        color: "black",
+                        paddingLeft: 2,
+                        paddingRight: 2,
+                        borderRadius: 4,
+                        marginBottom: -10,
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      Replied To: {message?.replyTo?.text}
+                    </p>
+                  )}
                   <p
                     style={{
                       color: "white",
@@ -235,39 +276,127 @@ const Chat = () => {
               return (
                 <div
                   style={{
-                    backgroundColor: "#E8E8E8",
                     display: "flex",
-                    justifyContent: "flex-start",
+                    flexDirection: "row",
                     alignItems: "center",
-                    marginRight: "auto",
-                    borderRadius: 10,
-                    paddingLeft: 10,
-                    paddingRight: 10,
-                    marginRight: 13,
-                    height: "auto",
-                    width: "fit-content",
-                    whiteSpace: "pre-wrap",
-                    wordWrap: "break-word",
-                    flexWrap: "wrap",
-                    maxWidth: "80%",
-                    overflowWrap: "anywhere",
-                    overflow: "auto",
-                    marginTop: 5,
                   }}
                 >
-                  <p
+                  <div
                     style={{
-                      color: "black",
+                      backgroundColor: "#E8E8E8",
+                      display: "flex",
+                      justifyContent: "flex-start",
+                      alignItems: "center",
+                      flexDirection: "column",
+                      marginRight: "auto",
+                      borderRadius: 10,
+                      paddingLeft: 10,
+                      paddingRight: 10,
+                      marginRight: 13,
+                      height: "auto",
+                      width: "fit-content",
+                      whiteSpace: "pre-wrap",
+                      wordWrap: "break-word",
+                      flexWrap: "wrap",
+                      maxWidth: "50%",
+                      overflowWrap: "anywhere",
+                      overflow: "auto",
+                      marginTop: 5,
                     }}
                   >
-                    {message.text}
-                  </p>
+                    {message?.replyTo?.text && (
+                      <p
+                        style={{
+                          backgroundColor: "#3580FF",
+                          color: "white",
+                          paddingLeft: 2,
+                          paddingRight: 2,
+                          borderRadius: 4,
+                          marginBottom: -10,
+                          alignSelf: "flex-start",
+                        }}
+                      >
+                        Replied To: {message?.replyTo?.text}
+                      </p>
+                    )}
+
+                    <p
+                      style={{
+                        color: "black",
+                      }}
+                    >
+                      {message.text}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleReply(message.text, message.id)}
+                    style={{
+                      height: 28,
+                      backgroundColor: "#3580FF",
+                      color: "white",
+                      borderRadius: 10,
+                      border: "none",
+                    }}
+                  >
+                    Reply
+                  </button>
                 </div>
               );
             }
           })}
         </Box>
-        <Box display={"flex"} gap={2} width={"100%"} marginTop={"auto"}>
+        <Box
+          display={"flex"}
+          width={"100%"}
+          marginTop={"auto"}
+          gap={replyToText.text !== "" ? 0 : 2}
+          flexDirection={replyToText.text !== "" ? "column" : "row"}
+        >
+          {replyToText.text !== "" && (
+            <Container
+              style={{
+                border: "1px solid black",
+                borderBottom: "none",
+                borderTopLeftRadius: 8,
+                borderTopRightRadius: 8,
+                display: "flex",
+                justifyContent: "space-between",
+                height: "100%",
+              }}
+            >
+              <Box>
+                <Typography
+                  style={{color: "#3580FF", fontWeight: 900, fontSize: 18}}
+                >
+                  Reply To: &nbsp;{" "}
+                </Typography>
+                <Typography
+                  style={{
+                    width: "fit-content",
+                    whiteSpace: "pre-wrap",
+                    wordWrap: "break-word",
+                    flexWrap: "wrap",
+                    maxWidth: "100%",
+                    overflowWrap: "anywhere",
+                    overflow: "auto",
+                  }}
+                >
+                  {replyToText.text}
+                </Typography>
+              </Box>
+              <Box>
+                <Button
+                  onClick={() => setReplyToText({id: "", text: ""})}
+                  size="small"
+                  style={{alignSelf: "flex-end"}}
+                  variant="contained"
+                >
+                  x
+                </Button>
+              </Box>
+            </Container>
+          )}
+
           <TextField
             fullWidth
             multiline
